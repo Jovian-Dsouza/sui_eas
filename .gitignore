@@ -21,3 +21,4 @@ sui.log.*
 
 # Testing artifacts
 coverage/
+node_modules/
