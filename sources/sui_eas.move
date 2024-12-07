@@ -13,7 +13,8 @@ module sui_eas::attestation {
 
     public struct AttestationRegistry has key {
         id: UID,
-        attestations: Table<vector<u8>, Attestation>
+        attestations: Table<u64, Attestation>, 
+        counter: u64
     }
 
     public struct Attestation has store {
@@ -25,7 +26,6 @@ module sui_eas::attestation {
         timestamp: u64
     }
 
-    // Event structs must be public
     public struct AttestationEvent has copy, drop {
         uid: vector<u8>,
         attester: address,
@@ -33,13 +33,14 @@ module sui_eas::attestation {
     }
 
     public struct RevocationEvent has copy, drop {
-        uid: vector<u8>
+        uid: u64
     }
 
     fun init(ctx: &mut TxContext) {
         transfer::share_object(AttestationRegistry {
             id: object::new(ctx),
-            attestations: table::new(ctx)
+            attestations: table::new(ctx), 
+            counter: 0
         });
     }
 
@@ -53,10 +54,9 @@ module sui_eas::attestation {
         let attester = tx_context::sender(ctx);
         let timestamp = tx_context::epoch(ctx);
         
-        // Simplified UID generation
-        let uid = generate_uid(attester, recipient, timestamp);
+        let uid = generate_uid(ctx,attester, recipient, timestamp);
         
-        table::add(&mut registry.attestations, uid, Attestation {
+        table::add(&mut registry.attestations, registry.counter, Attestation {
             attester,
             recipient,
             schema,
@@ -64,27 +64,31 @@ module sui_eas::attestation {
             revoked: false,
             timestamp
         });
+
+        registry.counter = registry.counter + 1;
         
-        // Simplified event
         event::emit(AttestationEvent { uid, attester, recipient });
     }
 
-    fun generate_uid(attester: address, recipient: address, timestamp: u64): vector<u8> {
-        let mut uid = vector::empty();
+    fun generate_uid(ctx: &TxContext, attester: address, recipient: address, timestamp: u64): vector<u8> {
+        let tx_time = tx_context::epoch_timestamp_ms(ctx);  // Get ms timestamp
+        
+        let mut uid = vector::empty();  // Add 'mut' here
         vector::append(&mut uid, bcs::to_bytes(&attester));
         vector::append(&mut uid, bcs::to_bytes(&recipient));
         vector::append(&mut uid, bcs::to_bytes(&timestamp));
+        vector::append(&mut uid, bcs::to_bytes(&tx_time));  // Add ms timestamp
         uid
     }
 
-    public fun is_valid(registry: &AttestationRegistry, uid: vector<u8>): bool {
+    public fun is_valid(registry: &AttestationRegistry, uid: u64): bool {
         table::contains(&registry.attestations, uid) 
             && !table::borrow(&registry.attestations, uid).revoked
     }
 
     public entry fun revoke(
         registry: &mut AttestationRegistry,
-        uid: vector<u8>,
+        uid: u64,
         ctx: &mut TxContext
     ) {
         let attestation = table::borrow_mut(&mut registry.attestations, uid);
@@ -97,7 +101,7 @@ module sui_eas::attestation {
 
     public fun get_attestation(
         registry: &AttestationRegistry,
-        uid: vector<u8>
+        uid: u64
     ): &Attestation {
         assert!(table::contains(&registry.attestations, uid), ERROR_ATTESTATION_NOT_FOUND);
         table::borrow(&registry.attestations, uid)
