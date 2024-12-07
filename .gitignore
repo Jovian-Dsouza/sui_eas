@@ -1,0 +1,23 @@
+# Build artifacts
+build/
+
+# Move dependencies
+.move/
+
+# IDE specific files
+.idea/
+.vscode/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Sui specific
+sui.log.*
+.history/
+
+# Testing artifacts
+coverage/
