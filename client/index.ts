@@ -3,6 +3,17 @@ import { SuiEAS } from './sui_eas';
 import { SuiClient } from "@mysten/sui.js/client";
 import { Ed25519Keypair } from "@mysten/sui.js/keypairs/ed25519";
 import { fromB64 } from "@mysten/bcs";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+async function getKeypair() {
+    const privateKey = process.env.PRIVATE_KEY;
+    if (!privateKey) throw new Error('Private key not found in environment variables');
+
+    const keypair = Ed25519Keypair.fromSecretKey(fromB64(privateKey));
+    return keypair;
+}
 
 async function main() {
     const eas = new SuiEAS();
