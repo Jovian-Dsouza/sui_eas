@@ -20,8 +20,7 @@ module sui_eas::attestation {
     public struct Attestation has store {
         attester: address,
         recipient: address,
-        schema: String,
-        data: vector<u8>,
+        data: String,
         revoked: bool,
         timestamp: u64
     }
@@ -47,8 +46,7 @@ module sui_eas::attestation {
     public entry fun attest(
         registry: &mut AttestationRegistry,
         recipient: address,
-        schema: String,
-        data: vector<u8>,
+        data: String,
         ctx: &mut TxContext
     ) {
         let attester = tx_context::sender(ctx);
@@ -59,7 +57,6 @@ module sui_eas::attestation {
         table::add(&mut registry.attestations, registry.counter, Attestation {
             attester,
             recipient,
-            schema,
             data,
             revoked: false,
             timestamp

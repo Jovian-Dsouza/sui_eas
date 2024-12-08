@@ -3,7 +3,7 @@ module sui_eas::true_tag {
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
     use sui::table::{Self, Table};
-    use std::string::{Self,String};
+    use std::string::String;
     use sui_eas::attestation::{Self, AttestationRegistry};
 
     /// Error codes
@@ -82,31 +82,26 @@ module sui_eas::true_tag {
         vault: &mut AnnotationVault,
         registry: &mut AttestationRegistry,
         task_id: u64,
-        data: vector<u8>,
+        data: String,
         ctx: &mut TxContext
     ) {
         let task = table::borrow_mut(&mut vault.tasks, task_id);
         
-        // Check if task is still accepting annotations
         assert!(task.completed_annotations < task.required_annotations, ETaskCompleted);
 
-        // Create attestation for the annotation
         attestation::attest(
             registry,
             tx_context::sender(ctx),
-            string::utf8(b"DATA_ANNOTATION"),
             data,
             ctx
         );
 
-        // Transfer reward directly to the annotator
         let reward_coins = coin::from_balance(
             balance::split(&mut task.remaining_budget, task.reward_per_annotation),
             ctx
         );
         transfer::public_transfer(reward_coins, tx_context::sender(ctx));
 
-        // Update task status
         task.completed_annotations = task.completed_annotations + 1;
     }
 }
